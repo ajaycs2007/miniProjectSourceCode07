@@ -18,6 +18,7 @@ void textFile(FILE *readPtr);
 void updateRecord(FILE *fPtr);
 void newRecord(FILE *fPtr);
 void deleteRecord(FILE *fPtr);
+void transferAmount(FILE *fPtr);
 
 int main(int argc, char *argv[])
 {
@@ -51,6 +52,9 @@ int main(int argc, char *argv[])
         // delete existing record
         case 4:
             deleteRecord(cfPtr);
+            break;
+        case 6:
+            transferAmount(cfPtr);
             break;
         // display if user does not select valid choice
         default:
@@ -211,8 +215,54 @@ unsigned int enterChoice(void)
                  "2 - update an account\n"
                  "3 - add a new account\n"
                  "4 - delete an account\n"
-                 "5 - end program\n? ");
+                 "5 - end program\n"
+                 "6 - transfer amount between accounts\n? ");
 
     scanf("%u", &menuChoice); // receive choice from user
     return menuChoice;
 } // end function enterChoice
+
+void transferAmount(FILE *fPtr)
+{
+    unsigned int fromAcc, toAcc;
+    double amount;
+    struct clientData sender = {0}, receiver = {0};
+
+    printf("Enter sender account: ");
+    scanf("%u", &fromAcc);
+
+    printf("Enter receiver account: ");
+    scanf("%u", &toAcc);
+
+    printf("Enter amount to transfer: ");
+    scanf("%lf", &amount);
+
+    fseek(fPtr, (fromAcc - 1) * sizeof(struct clientData), SEEK_SET);
+    fread(&sender, sizeof(struct clientData), 1, fPtr);
+
+    fseek(fPtr, (toAcc - 1) * sizeof(struct clientData), SEEK_SET);
+    fread(&receiver, sizeof(struct clientData), 1, fPtr);
+
+    if (sender.acctNum == 0 || receiver.acctNum == 0)
+    {
+        printf("Invalid account.\n");
+        return;
+    }
+
+    if (sender.balance < amount)
+    {
+        printf("Insufficient balance.\n");
+        return;
+    }
+
+    sender.balance -= amount;
+    receiver.balance += amount;
+
+    fseek(fPtr, (fromAcc - 1) * sizeof(struct clientData), SEEK_SET);
+    fwrite(&sender, sizeof(struct clientData), 1, fPtr);
+
+    fseek(fPtr, (toAcc - 1) * sizeof(struct clientData), SEEK_SET);
+    fwrite(&receiver, sizeof(struct clientData), 1, fPtr);
+
+    printf("Transfer successful.\n");
+}
